@@ -1,0 +1,59 @@
+import org.apache.http.HttpVersion
+import org.apache.http.client.methods.HttpPost
+import org.apache.http.entity.mime.HttpMultipartMode
+import org.apache.http.entity.mime.MultipartEntity
+import org.apache.http.entity.mime.content.FileBody
+import org.apache.http.impl.client.DefaultHttpClient
+import org.apache.http.params.CoreProtocolPNames
+import org.apache.http.util.EntityUtils
+
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+
+  dependencies {
+    classpath 'org.apache.httpcomponents:httpmime:4.2.5'
+    classpath 'org.apache.httpcomponents:httpclient:4.2.5'
+  }
+}
+
+task verifyReadiness() {
+  doLast {
+    int todos = 0
+    file('src/main/groovy').traverse {f ->
+      if (f.isFile() && f.text.contains('TODO')) {
+        println "\n  $f"
+        f.text.split('\n').eachWithIndex {line, idx ->
+          if (line.contains('TODO')) {
+            println "    $idx: $line"
+            todos ++
+          }
+        }
+      }
+    }
+    if (todos) {
+      println ""
+      throw new GradleException("You still have $todos TODO comments in your code. Please remove them in order to submit.")
+    }
+  }
+}
+
+task submitAssignment() {
+  doLast {
+    def client = new DefaultHttpClient()
+    client.params.setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1)
+
+    def mpe = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE)
+    mpe.addPart('data', new FileBody(new File("build/distributions/${project.name}-src.zip")))
+
+    def post = new HttpPost('http://deploy.transcendinsights.com/candy/submit')
+    post.entity = mpe
+
+    println EntityUtils.toString(client.execute(post).getEntity(), "UTF-8")
+
+    client.connectionManager.shutdown()
+  }
+
+  dependsOn 'srcZip', 'verifyReadiness'
+}

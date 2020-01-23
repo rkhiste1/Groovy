@@ -1,0 +1,23 @@
+apply plugin: 'eclipse'
+apply plugin: 'groovy'
+apply plugin: 'idea'
+apply from: 'gradle/verifyAndSubmit.gradle'
+
+assert JavaVersion.current().isJava8()
+
+repositories {
+  mavenCentral()
+  maven { url "http://deploy.transcendinsights.com/nexus/content/groups/public/" }
+}
+
+dependencies {
+  compile 'org.codehaus.groovy:groovy-all:2.4.5'
+  testCompile 'junit:junit:4.7'
+
+}
+
+task srcZip(type: Zip, dependsOn: classes) {
+  classifier = 'src'
+  from projectDir
+  include 'src/**/*'
+}
